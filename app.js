@@ -9,7 +9,7 @@ details. You should have received a copy of the GNU General Public License along
 with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
-const corsUrl = 'https://corsproxy.io/?'; // need proxy to allow for cross origin request
+const corsUrl = 'https://my-cors-proxy.nielsdaemen747.workers.dev/?url='; // my own proxy worker on cloudfare
 async function getSoundingGraphImgUrl(url)
 {
   try {
@@ -587,10 +587,10 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   const hourSelector = document.getElementById('hourSelector');
   const hour = hourSelector.options[hourSelector.selectedIndex].value;
   epochTime += hour * 3600;
-  const soundingData = await loadSounding(stationSelector.options[stationSelector.selectedIndex].value, epochTime);
+  // const soundingData = await loadSounding(stationSelector.options[stationSelector.selectedIndex].value, epochTime);
   // console.log(soundingData);
-  const soundingForSim = rawSoundingToSimSounding(soundingData, 12000 /*guiControls.simHeight*/, 305);
-  console.log('soundingForSim', soundingForSim);
+  // const soundingForSim = rawSoundingToSimSounding(soundingData, 12000 /*guiControls.simHeight*/, 305);
+  // console.log('soundingForSim', soundingForSim);
 
   await setLoadingBar();
 
@@ -2212,16 +2212,17 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
 
   for (var y = 0; y <= sim_res_y; y++) {
     var tempC = Math.max(map_range(y, 0, sim_res_y - 1, 15.0, -70.0), -60);
-    // initial_T[y] = CtoK(tempC); // initial temperature profile
+    initial_T[y] = CtoK(tempC);                // initial temperature profile
+    initial_W[y] = maxWater(CtoK(tempC - 5.)); // convert dew point to mixing ratio
 
-    let soundingSample = soundingForSim[y];
-    initial_T[y] = CtoK(soundingSample.t);            // initial temperature profile
-    initial_W[y] = maxWater(CtoK(soundingSample.td)); // convert dew point to mixing ratio
+    // let soundingSample = soundingForSim[y];
+    // initial_T[y] = CtoK(soundingSample.t);            // initial temperature profile
+    // initial_W[y] = maxWater(CtoK(soundingSample.td)); // convert dew point to mixing ratio
   }
 
   var initial_P = new Float32Array(604); // sim_res_y + 1
-  // initial_P[sim_res_y] = 185.0;          // pressure at top of atmosphere 12000 meters
-  initial_P[sim_res_y] = soundingForSim[sim_res_y].p;
+  initial_P[sim_res_y] = 190.0;          // pressure at top of atmosphere 12000 meters
+  // initial_P[sim_res_y] = soundingForSim[sim_res_y].p;
 
   for (var y = sim_res_y - 1; y > 0; y--) {
     var density = calcDensity(initial_P[y + 1], initial_T[y + 1]);
@@ -2230,7 +2231,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
 
 
     // console.log(density);
-    const gravMult = 4.0;                                 // 2.0
+    const gravMult = 4.0;                                 // 4.0
     initial_P[y] = initial_P[y + 1] + density * gravMult; // initial temperature profile
   }
 

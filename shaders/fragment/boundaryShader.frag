@@ -105,7 +105,7 @@ void main()
     // temperature is calculated for Vy location
     vec4 baseX0Yp = texture(baseTex, texCoordX0Yp);
 
-#define gravMult 4.0          // 0.004 0.0005
+#define gravMult 4.0          // 4.0
     const float dT = 0.00050; // 0.00050
 
                               // gravity for convection interpolated between this and above cell to fix wierd waves
