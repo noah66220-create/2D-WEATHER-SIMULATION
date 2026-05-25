@@ -134,7 +134,7 @@ void main()
     // temperature is calculated for Vy location
     vec4 baseX0Yp = texture(baseTex, texCoordX0Yp);
 
-#define gravMult 0.0001 // 0.0001 0.0005
+#define gravMult 0.0005 // 0.0001 0.0005
 
     // gravity for convection interpolated between this and above cell to fix wierd waves
     // Because vertical velocity is defined at the top of the cell while temperature is defined in it's center.
@@ -202,7 +202,7 @@ void main()
 
     float velocityFactor = length(base.xy) * 0.1; // 0.2
 
-    // apply vorticity force
+                                                  // apply vorticity force
     base.xy += vec2(vortForceX0Y0.x + vortForceX0Ym.x, vortForceX0Y0.y + vortForceXmY0.y) * (vorticity + velocityFactor);
     //}
 

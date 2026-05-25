@@ -39,5 +39,5 @@ void main()
 
   // pressure changes proportional to the net in or outflow, to or from the cell.
   // 0.05 - 0.49   was 0.40, lower multiplier dampenes pressure waves.
-  base[2] += (baseXmY0[0] - base[0] + baseX0Ym[1] - base[1]) * 0.45;
+  base[2] += (baseXmY0[0] - base[0] + baseX0Ym[1] - base[1]) * 0.495;
 }

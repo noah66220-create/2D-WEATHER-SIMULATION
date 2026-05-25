@@ -383,7 +383,7 @@ const guiControls_default = {
   dayNightCycle : true,
   accelerateNight : true,
   greenhouseGases : 0.001,
-  waterGreenHouseEffect : 0.0015,
+  waterGreenHouseEffect : 0.0023,
   IR_rate : 1.0,
   tool : 'TOOL_NONE',
   brushSize : 20,

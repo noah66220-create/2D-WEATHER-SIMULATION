@@ -88,17 +88,28 @@ void main()
     vec2 velAtVy = vec2((cellXmY0.x + cellX0Yp.x + cellXmYp.x + cellX0Y0.x) / 4.,
                         cellX0Y0.y);                                                           // midle of top edge of cell
 
-    // ADVECT AIR:
+                                                                                               // ADVECT AIR:
 
-    base[VX] = bilerp(baseTex, fragCoord - velAtVx).x;
-    base[VY] = bilerp(baseTex, fragCoord - velAtVy).y;
+    // base[VX] = bilerp(baseTex, fragCoord - velAtVx).x;
+    // base[VY] = bilerp(baseTex, fragCoord - velAtVy).y;
 
-    base[PRESSURE] = bilerpWall(baseTex, wallTex, fragCoord - velAtP)[PRESSURE];
-    base[TEMPERATURE] = bilerpWall(baseTex, wallTex, fragCoord - velAtP)[TEMPERATURE];
+    base.xy = bilerp(baseTex, fragCoord - cellX0Y0.xy).xy;
 
-    water.xyw = bilerpWall(waterTex, wallTex, fragCoord - velAtP).xyw; // centered
+    // base[PRESSURE] = textureCubicMonoWall(baseTex, wallTex, fragCoord - velAtP)[PRESSURE];
+    // base[TEMPERATURE] = textureCubicMonoWall(baseTex, wallTex, fragCoord - velAtP)[TEMPERATURE];
 
-                                                                       //   water.z = bilerpWall(waterTex, wallTex, fragCoord + vec2(0.0, +0.01)).z;
+
+    base.zw = textureCubicMonoWall(baseTex, wallTex, fragCoord - velAtP).zw;
+
+    // base[TEMPERATURE] = textureCubicMonoWall(baseTex, wallTex, fragCoord - velAtP)[TEMPERATURE];
+
+    // base.x = textureCubicMonoWall(baseTex, wallTex, fragCoord - velAtVx).x;
+    // base.y = textureCubicMonoWall(baseTex, wallTex, fragCoord - velAtVy).y;
+
+
+    water.xyw = textureCubicMonoWall(waterTex, wallTex, fragCoord - cellX0Y0.xy).xyw; // centered
+
+    //   water.z = bilerpWall(waterTex, wallTex, fragCoord + vec2(0.0, +0.01)).z;
     // // precipitation visualization
     water[PRECIPITATION] = bilerpWall(waterTex, wallTex, fragCoord - velAtP + vec2(0, 0.05))[PRECIPITATION]; // precipitation visualization advected with flow, and downward
 
