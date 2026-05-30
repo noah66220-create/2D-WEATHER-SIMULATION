@@ -3,13 +3,21 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>2D Weather Sandbox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Weather Sandbox - 2.5D Edition</title>
+    
+    <!-- Libraries -->
     <script type="text/javascript" src="libraries/dat.gui.min.js"></script>
     <script type="text/javascript" src="libraries/pako.min.js"></script>
     <script type="text/javascript" src="libraries/chart.js"></script>
     <script type="text/javascript" src="libraries/chartjs-adapter-date-fns.js"></script>
-    <script type="text/javascript" src="app.js"></script>
+    
+    <!-- Three.js for 2.5D visualization -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    
     <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+    
     <style>
         :root {
             --text-color: #ffffff;
@@ -21,9 +29,15 @@
             --soft-gradient: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(0, 123, 255, 0.1));
         }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: url('resources/img/background.png') bottom left no-repeat;
             background-size: cover;
             background-attachment: fixed;
@@ -31,7 +45,6 @@
             line-height: 1.6;
             overflow-x: hidden;
         }
-
 
         .main-nav {
             position: fixed;
@@ -41,10 +54,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0rem 2rem 0rem 2rem;
+            padding: 1rem 2rem;
             background: rgba(0, 0, 0, 0.13);
             backdrop-filter: blur(10px);
-            z-index: 0;
+            z-index: 100;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
@@ -58,7 +71,6 @@
 
         .nav-icons {
             display: flex;
-            padding-top: 1rem;
             gap: 1.5rem;
             align-items: center;
         }
@@ -75,28 +87,95 @@
             opacity: 1;
         }
 
-        .resolution-warning {
-            margin-top: 4rem;
-            max-width: 1200px;
-            padding: 1rem 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: var(--border-radius);
-
+        /* 2.5D Toggle Button */
+        #toggle2_5d {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 101;
+            padding: 12px 24px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            transition: all var(--transition-speed);
         }
 
-        .resolution-warning p {
-            margin: 0;
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.5;
+        #toggle2_5d:hover {
+            background: var(--hover-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #toggle2_5d.active {
+            background: #e74c3c;
+        }
+
+        /* 3D Canvas Container */
+        #canvas3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+        }
+
+        #canvas3d.active {
+            pointer-events: auto;
+            display: block;
         }
 
         #IntroScreen {
-            padding: 20px;
+            padding: 120px 20px 20px;
             max-width: 1200px;
-            margin: 20px;
+            margin: 0 auto;
             border-radius: var(--border-radius);
             animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-group {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .input-group select,
+        .input-group input[type="date"] {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            margin: 5px;
+        }
+
+        .resolution-warning {
+            margin-top: 2rem;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--accent-color);
         }
 
         table {
@@ -115,6 +194,8 @@
             max-width: 800px;
             margin: 10px 0;
             height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
         }
 
         input[type="button"] {
@@ -127,41 +208,69 @@
             font-size: 1rem;
             transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
             box-shadow: var(--shadow);
+            margin: 10px 5px;
         }
 
         input[type="button"]:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
             background-color: #004a9a;
-            transition: var(--transition-speed);
         }
 
-        #help {
-            margin: 20px 0;
-            padding: 20px;
-            background: var(--soft-gradient);
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
-            animation: fadeIn 1s ease-in-out;
         }
 
         .tips,
         .controls,
         .example-files {
             margin: 20px 0;
-            padding: 15px;
+            padding: 20px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow);
         }
 
+        .tips h2,
+        .controls h2,
+        .example-files h3 {
+            margin-bottom: 15px;
+            color: var(--accent-color);
+        }
+
+        .tips ul {
+            padding-left: 20px;
+        }
+
+        .tips li {
+            margin: 8px 0;
+        }
+
         .support {
-            margin: 20px 0;
-            padding: 15px;
+            margin: 30px 0;
+            padding: 20px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: var(--border-radius);
-            box-shadow: var(--shadow);
             text-align: center;
+            border: 2px solid #2ecc71;
+        }
+
+        .support h1 {
+            color: #2ecc71;
+            margin-bottom: 10px;
+        }
+
+        .support a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .support a:hover {
+            text-decoration: underline;
         }
 
         #mainCanvas {
@@ -178,88 +287,52 @@
             display: none;
         }
 
-        .autopilotNumberInput {
-            background-color: #0000ff;
-            border: 3px solid #0000ff;
-            color: #ffffff;
-        }
-
-        .airbus-switch {
-            display: none
-        }
-
-        .airbus-label {
-            position: relative;
-            width: 50px;
-            height: 50px;
-            background: #222;
-            border: 2px solid #555;
-            border-radius: 10px;
-            box-shadow: inset 0 0 8px #000;
-            color: #fff;
-            font-size: 13px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            align-items: flex-end;
-        }
-
-        .airbus-label::before {
-            content: "";
-            position: absolute;
-            top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60%;
-            height: 10px;
-            background: #020;
-            border: 1px solid #030;
-            border-radius: 2px;
-        }
-
-        .airbus-switch:checked+.airbus-label::before {
-            background: #0f0;
-            box-shadow: 0 0 8px #0f0;
-        }
-
-        :root {
-            --size: 50px
-        }
-
-        .gauge {
-            position: absolute;
-            left: 300px;
-            height: calc(var(--size)/2);
-        }
-
-        svg {
+        .example-files a {
+            color: white;
             display: block;
-            overflow: visible
+            margin: 5px 0;
+            padding: 5px 10px;
+            transition: all 0.3s;
         }
 
-        .bg-arc {
-            stroke: #263242;
-            stroke-width: 24;
-            fill: none;
-            stroke-linecap: round
+        .example-files a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            padding-left: 15px;
         }
 
-        .fill-arc {
-            stroke: green;
-            stroke-width: 24;
-            fill: none;
-            stroke-linecap: round;
-            transition: stroke 0.4s linear;
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
         }
 
-        .value {
-            font-size: 56px;
-            font-weight: 700;
-            fill: #ffffff;
-            text-anchor: middle
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-nav {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .nav-icons {
+                margin-top: 1rem;
+            }
+
+            #toggle2_5d {
+                top: 120px;
+                right: 10px;
+                padding: 8px 16px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -267,7 +340,7 @@
 <body id="body" onload="updateSetupSliders();">
     <nav class="main-nav">
         <div class="nav-title">
-            <h1>2D Weather Sandbox</h1>
+            <h1>2D Weather Sandbox <span style="font-size: 0.6em; color: var(--accent-color);">2.5D Edition</span></h1>
         </div>
         <div class="nav-icons">
             <a href="https://github.com/niels747/2D-Weather-Sandbox" target="_blank" rel="noopener noreferrer">
@@ -285,39 +358,42 @@
         </div>
     </nav>
 
+    <!-- 2.5D Toggle Button -->
+    <button id="toggle2_5d" onclick="toggle2_5D()">🔄 2.5D: OFF</button>
+    
+    <!-- 3D Canvas Container -->
+    <canvas id="canvas3d"></canvas>
+
     <div id="IntroScreen">
+        <div class="input-group">
+            <label>Preset:</label>
+            <select id="presetSelect" style="margin: 10px;"></select>
+        </div>
 
-        <p style="margin-top: 50px;"></p>
-
-        <div style="width: 100%; height: 500px;">
-            <div style="float: left; margin-right: 100px;">
-                <div>
-                    Preset:<select id="presetSelect" style="margin: 10px;"></select>
-                </div>
-                <div>
-                    <select id="stationSelect"></select>
-                    <input type="date" id="datePicker" value="2025-06-15" min="2010-01-01"
-                        onchange="prepareSounding();" />
-
-                    <select id="hourSelector" onchange="prepareSounding();">
-                        <option value="0">00H</option>
-                        <option value="6">06H</option>
-                        <option value="12" selected>12H</option>
-                        <option value="18">18H</option>
-                    </select>
-                    <p>Select a real world sounding to use as forcing in the simulation</p>
-                </div>
+        <div class="input-group">
+            <div>
+                <label>Station:</label>
+                <select id="stationSelect"></select>
             </div>
-            <img style="float: left; height: 500px;" id="soundingPreview"
-                alt="Sounding not available, Please select a different time.">
+            <div style="margin-top: 10px;">
+                <label>Date:</label>
+                <input type="date" id="datePicker" value="2025-06-15" min="2010-01-01" onchange="prepareSounding();" />
+                <label>Hour:</label>
+                <select id="hourSelector" onchange="prepareSounding();">
+                    <option value="0">00H</option>
+                    <option value="6">06H</option>
+                    <option value="12" selected>12H</option>
+                    <option value="18">18H</option>
+                </select>
+            </div>
+            <p style="margin-top: 10px; opacity: 0.8;">Select a real world sounding to use as forcing in the simulation</p>
+        </div>
+
+        <div class="resolution-warning">
+            <p><strong>Choose a resolution</strong> - Higher resolutions provide more detail but significantly impact performance</p>
         </div>
 
         <form id="startBtn" oninput="updateSetupSliders();">
-            <div class="resolution-warning">
-                <p>Choose a resolution - Higher resolutions provide more detail but significantly impact performance
-                </p>
-            </div>
-
             <table>
                 <tr>
                     <td><b>Horizontal resolution</b></td>
@@ -325,9 +401,9 @@
                         <input type="range" min="100" max="16000" value="3000" step="100" id="simResSelX" />
                         <output id="simResShowX"></output>
                     </td>
-                    <td id="simWorldProperties" style="color:rgb(255, 255, 255); width: 50%"> Cellheight: 40m Sim
-                        width:
-                        40 km</td>
+                    <td id="simWorldProperties" style="color:rgb(255, 255, 255); width: 50%"> 
+                        Cellheight: 40m Sim width: 40 km
+                    </td>
                 </tr>
                 <tr>
                     <td><b>Vertical resolution</b></td>
@@ -335,9 +411,9 @@
                         <input type="range" min="100" max="500" value="300" step="10" id="simResSelY" />
                         <output id="simResShowY"></output>
                     </td>
-                    <td><i id="simResYWarning" style="color:rgb(255, 61, 61); display: none;">Vertical resolutions
-                            other
-                            than 300 are not optimized and may be buggy!</i></td>
+                    <td><i id="simResYWarning" style="color:rgb(255, 61, 61); display: none;">
+                        Vertical resolutions other than 300 are not optimized and may be buggy!
+                    </i></td>
                 </tr>
                 <tr>
                     <td><b>Simulation height</b></td>
@@ -345,231 +421,315 @@
                         <input type="range" min="5000" max="15000" value="12000" step="100" id="simHeightSel" />
                         <output id="simHeightShow"></output>
                     </td>
-                    <td><i id="simHeightWarning" style="color:rgb(255, 61, 61); display: none;">Sim heights other
-                            than
-                            12000 m are not optimized and may be buggy!</i></td>
+                    <td><i id="simHeightWarning" style="color:rgb(255, 61, 61); display: none;">
+                        Sim heights other than 12000 m are not optimized and may be buggy!
+                    </i></td>
                 </tr>
             </table>
-            <input type="button" value="Create New Simulation" onclick="loadData ()" />
-            <i>Move the mouse until you see a terrain you like, then just click to start.</i>
+            
+            <input type="button" value="🚀 Create New Simulation" onclick="loadData()" />
+            <p style="margin-top: 15px; font-style: italic; opacity: 0.9;">
+                Move the mouse until you see a terrain you like, then just click to start.
+            </p>
         </form>
 
-
-        <p style="margin-top: 70px;">
-            <label for="fileInput">Load Save File:</label>
-            <input type="file" id="fileInput" name="fileInput" accept=".weathersandbox " onchange="loadData()" />
-        </p>
-
-        <div class="example-files">
-            <h3>Example Save Files</h3>
-            <p><a style="color: white" href="./saves/Background image.weathersandbox">Background image</a></p>
-            <p><a style="color: white" href="./saves/Hotlake Valley.weathersandbox">Hotlake Valley</a></p>
-            <p><a style="color: white" href="./saves/Mountain uplift cell.weathersandbox">Mountain Uplift Cell at
-                    sunset</a></p>
-            <p><a style="color: white" href="./saves/480 km map with strong derecho.weathersandbox">480 km map with
-                    strong Derecho</a></p>
-            <p><a style="color: white" href="./saves/Three Nice Cells.weathersandbox">Three Nice Cells</a></p>
-            <p><a style="color: white" href="./saves/Mountain Snow Storm.weathersandbox">Mountain Snow Storm</a></p>
-            <p><a style="color: white" href="./saves/Powerful & Longlasting Cell.weathersandbox">Powerful &
-                    Longlasting
-                    Cell</a></p>
-            <p><a style="color: white" href="./saves/Rain Sucked Up.weathersandbox">Powerful updraft sucking up rain
-                    and
-                    turning it into hail.</a></p>
-            <p><a style="color: white" href="./saves/Powerful Hail and Snow Cells.weathersandbox">Powerful Hail and
-                    Snow
-                    Cells</a></p>
-            <p><a style="color: white" href="./saves/Very nice cell over coastal mountain.weathersandbox">Very nice
-                    cell
-                    over coastal mountain</a></p>
-            <p><a style="color: white" href="./saves/Awesome Convergence Cell.weathersandbox">Awesome Convergence
-                    Cell</a></p>
-            <p><a style="color: white" href="./saves/Two nice cells in lake valley.weathersandbox">Two nice cells in
-                    lake valley</a></p>
-            <p><a style="color: white" href="./saves/Insane CAPE.weathersandbox">Insane CAPE</a></p>
-            <p><a style="color: white" href="./saves/100 X 100 Test.weathersandbox">100 X 100 Test</a></p>
+        <div class="input-group" style="margin-top: 30px;">
+            <label for="fileInput"><strong>Load Save File:</strong></label>
+            <input type="file" id="fileInput" name="fileInput" accept=".weathersandbox" onchange="loadData()" />
         </div>
 
-        <div id="help" class="tips">
-            <h2>Tips</h2>
+        <div class="example-files">
+            <h3>📁 Example Save Files</h3>
+            <a href="./saves/Background image.weathersandbox">Background image</a>
+            <a href="./saves/Hotlake Valley.weathersandbox">Hotlake Valley</a>
+            <a href="./saves/Mountain uplift cell.weathersandbox">Mountain Uplift Cell at sunset</a>
+            <a href="./saves/480 km map with strong derecho.weathersandbox">480 km map with strong Derecho</a>
+            <a href="./saves/Three Nice Cells.weathersandbox">Three Nice Cells</a>
+            <a href="./saves/Mountain Snow Storm.weathersandbox">Mountain Snow Storm</a>
+            <a href="./saves/Powerful & Longlasting Cell.weathersandbox">Powerful & Longlasting Cell</a>
+            <a href="./saves/Rain Sucked Up.weathersandbox">Powerful updraft sucking up rain and turning it into hail</a>
+            <a href="./saves/Powerful Hail and Snow Cells.weathersandbox">Powerful Hail and Snow Cells</a>
+            <a href="./saves/Very nice cell over coastal mountain.weathersandbox">Very nice cell over coastal mountain</a>
+            <a href="./saves/Awesome Convergence Cell.weathersandbox">Awesome Convergence Cell</a>
+            <a href="./saves/Two nice cells in lake valley.weathersandbox">Two nice cells in lake valley</a>
+            <a href="./saves/Insane CAPE.weathersandbox">Insane CAPE</a>
+            <a href="./saves/100 X 100 Test.weathersandbox">100 X 100 Test</a>
+        </div>
+
+        <div class="tips">
+            <h2>💡 Tips</h2>
             <ul>
                 <li>Vertical resolution of 300 gives most realistic results</li>
-                <li>Larger horizontal resolutions allow stronger converging winds to develop, forming more
-                    realistic,
-                    longer lasting cells</li>
+                <li>Larger horizontal resolutions allow stronger converging winds to develop, forming more realistic, longer lasting cells</li>
                 <li>Performance is mostly GPU dependent, GTX 1070 or better recommended for realtime gameplay</li>
-                <li>If you have a laptop with a dedicated GPU, make sure the browser is actually using it! It's
-                    often
-                    using the integrated graphics by default</li>
+                <li>If you have a laptop with a dedicated GPU, make sure the browser is actually using it! It's often using the integrated graphics by default</li>
                 <li>Play in fullscreen mode (F11)</li>
+                <li><strong>NEW:</strong> Try 2.5D mode for a different perspective on your simulations!</li>
             </ul>
         </div>
 
         <div class="controls">
-            <h2>Controls</h2>
+            <h2>🎮 Controls</h2>
             <h3>Mouse</h3>
             <ul>
                 <li>Middle mouse button to drag the simulation area around</li>
                 <li>Mouse wheel to zoom in and out, Or to change brush size while holding down B</li>
-                <li>Left mouse button to use selected tool. Hold down Ctrl (command on mac) to perform the inverted
-                    action</li>
+                <li>Left mouse button to use selected tool. Hold down Ctrl (command on mac) to perform the inverted action</li>
                 <li>Touchscreen input is pretty basic for now, will add more controls in the future</li>
             </ul>
+            
             <h3>Keys</h3>
             <table style="width: 100%">
-                <tr>
-                    <td>1 - 9</td>
-                    <td>Display Modes</td>
-                </tr>
-                <tr>
-                    <td>K</td>
-                    <td>Air Quality Display</td>
-                </tr>
-                <tr>
-                    <td>C</td>
-                    <td>Relative Humidity & Cloud Density Display</td>
-                </tr>
-                <tr>
-                    <td>QWERTYUIOP [ ] \</td>
-                    <td>Tools</td>
-                </tr>
-                <tr>
-                    <td>Left Ctrl</td>
-                    <td>Invert Tool Action</td>
-                </tr>
-                <tr>
-                    <td>Esc</td>
-                    <td>No Tool, Flashlight</td>
-                </tr>
-                <tr>
-                    <td>Arrows ◄ ▲ ▼ ►</td>
-                    <td>Move View</td>
-                </tr>
-                <tr>
-                    <td>+ -</td>
-                    <td>Zoom In / Out</td>
-                </tr>
-                <tr>
-                    <td>Right Ctrl</td>
-                    <td>Hold For Slower Pan speed</td>
-                </tr>
-                <tr>
-                    <td>Space Bar</td>
-                    <td>Pause / Resume</td>
-                </tr>
-                <tr>
-                    <td>Tab</td>
-                    <td>Show / Hide Velocity Vectors</td>
-                </tr>
-                <tr>
-                    <td>A</td>
-                    <td>Toggle Flight Simulator Mode. Vertical Mouse position controls elevator, Throttle: ▲ ▼ </td>
-                </tr>
-                <tr>
-                    <td>F</td>
-                    <td>Toggle camera following plane</td>
-                </tr>
-                <tr>
-                    <td>Shift</td>
-                    <td>Toggle Gear</td>
-                </tr>
-                <tr>
-                    <td>Z</td>
-                    <td>Drop water from airplane to extinguish fires</td>
-                </tr>
-                <tr>
-                    <td>CapsLk</td>
-                    <td>Autopilot</td>
-                </tr>
-                <tr>
-                    <td>.</td>
-                    <td>Brakes</td>
-                </tr>
-                <tr>
-                    <td>/</td>
-                    <td>Toggle Engine</td>
-                </tr>
-                <tr>
-                    <td>D</td>
-                    <td>Show / Hide Droplets</td>
-                </tr>
-                <tr>
-                    <td>X</td>
-                    <td>Toggle follow droplet</td>
-                </tr>
-                <tr>
-                    <td>G</td>
-                    <td>Show / Hide Sounding Graph</td>
-                </tr>
-                <tr>
-                    <td>N</td>
-                    <td>Show / Hide Weather Stations</td>
-                </tr>
-                <tr>
-                    <td>M</td>
-                    <td>Add / Remove Weather Stations</td>
-                </tr>
-                <tr>
-                    <td>H</td>
-                    <td>Show / Hide GUI</td>
-                </tr>
-                <tr>
-                    <td>V</td>
-                    <td>Reset View</td>
-                </tr>
-                <tr>
-                    <td>B</td>
-                    <td>Hold To Change Brush Size By Scrolling</td>
-                </tr>
-                <tr>
-                    <td>B x 2</td>
-                    <td>Toggle Whole Width Brush</td>
-                </tr>
-                <tr>
-                    <td>L</td>
-                    <td>Reload From Save File</td>
-                </tr>
-                <tr>
-                    <td>Home</td>
-                    <td>1 Iteration/sec</td>
-                </tr>
-                <tr>
-                    <td>End</td>
-                    <td>Auto Iterations/sec</td>
-                </tr>
-                <tr>
-                    <td>PgUp</td>
-                    <td>Increase Iterations/sec</td>
-                </tr>
-                <tr>
-                    <td>PgDn</td>
-                    <td>Decrease Iterations/sec</td>
-                </tr>
+                <tr><td>1 - 9</td><td>Display Modes</td></tr>
+                <tr><td>K</td><td>Air Quality Display</td></tr>
+                <tr><td>C</td><td>Relative Humidity & Cloud Density Display</td></tr>
+                <tr><td>QWERTYUIOP [ ] \</td><td>Tools</td></tr>
+                <tr><td>Left Ctrl</td><td>Invert Tool Action</td></tr>
+                <tr><td>Esc</td><td>No Tool, Flashlight</td></tr>
+                <tr><td>Arrows ◄ ▲ ▼ ►</td><td>Move View</td></tr>
+                <tr><td>+ -</td><td>Zoom In / Out</td></tr>
+                <tr><td>Right Ctrl</td><td>Hold For Slower Pan speed</td></tr>
+                <tr><td>Space Bar</td><td>Pause / Resume</td></tr>
+                <tr><td>Tab</td><td>Show / Hide Velocity Vectors</td></tr>
+                <tr><td>A</td><td>Toggle Flight Simulator Mode</td></tr>
+                <tr><td>F</td><td>Toggle camera following plane</td></tr>
+                <tr><td>Shift</td><td>Toggle Gear</td></tr>
+                <tr><td>Z</td><td>Drop water from airplane to extinguish fires</td></tr>
+                <tr><td>CapsLk</td><td>Autopilot</td></tr>
+                <tr><td>.</td><td>Brakes</td></tr>
+                <tr><td>/</td><td>Toggle Engine</td></tr>
+                <tr><td>D</td><td>Show / Hide Droplets</td></tr>
+                <tr><td>X</td><td>Toggle follow droplet</td></tr>
+                <tr><td>G</td><td>Show / Hide Sounding Graph</td></tr>
+                <tr><td>N</td><td>Show / Hide Weather Stations</td></tr>
+                <tr><td>M</td><td>Add / Remove Weather Stations</td></tr>
+                <tr><td>H</td><td>Show / Hide GUI</td></tr>
+                <tr><td>V</td><td>Reset View</td></tr>
+                <tr><td>B</td><td>Hold To Change Brush Size By Scrolling</td></tr>
+                <tr><td>B x 2</td><td>Toggle Whole Width Brush</td></tr>
+                <tr><td>L</td><td>Reload From Save File</td></tr>
+                <tr><td>Home</td><td>1 Iteration/sec</td></tr>
+                <tr><td>End</td><td>Auto Iterations/sec</td></tr>
+                <tr><td>PgUp</td><td>Increase Iterations/sec</td></tr>
+                <tr><td>PgDn</td><td>Decrease Iterations/sec</td></tr>
             </table>
         </div>
 
         <div class="support">
-            <h1 style="color: rgb(0, 255, 0)">$ Support me on Patreon $</h1>
-            If you love my project and want to support its future development, please consider <a
-                href="https://www.patreon.com/user?u=76043935" target="_blank" rel="noopener noreferrer"
-                style="color: white">supporting me on patreon</a>
-            <br />
-            Every small amount helps! Thank you!
-            <br />
-            <br />
-            <br />
-            <i>By Niels Daemen</i>
+            <h1>$ Support me on Patreon $</h1>
+            <p>If you love my project and want to support its future development, please consider 
+            <a href="https://www.patreon.com/user?u=76043935" target="_blank" rel="noopener noreferrer">supporting me on patreon</a></p>
+            <p>Every small amount helps! Thank you!</p>
+            <p style="margin-top: 20px;"><i>By Niels Daemen</i></p>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;"><i>2.5D visualization added for enhanced viewing experience</i></p>
         </div>
     </div>
 
-    </div>
-
     <canvas id="graphCanvas"></canvas>
-    <canvas id="dropletInfoCanvas" width="90" height="50"
-        style="z-index: 1; position: absolute; left: 50%; top: 50%;"></canvas>
+    <canvas id="dropletInfoCanvas" width="90" height="50" style="z-index: 1; position: absolute; left: 50%; top: 50%; display: none;"></canvas>
     <canvas id="mainCanvas">
         Your browser does not support HTML5, you must be using a really old browser!
     </canvas>
+
+    <script type="text/javascript" src="app.js"></script>
+    
+    <!-- 2.5D Visualization Script -->
+    <script>
+        // 2.5D Mode Variables
+        let is2_5DMode = false;
+        let scene, camera, renderer, controls;
+        let cloudMesh, groundMesh;
+        let cloudData = [];
+        let animationId;
+
+        // Toggle 2.5D Mode
+        function toggle2_5D() {
+            is2_5DMode = !is2_5DMode;
+            const btn = document.getElementById('toggle2_5d');
+            const canvas3d = document.getElementById('canvas3d');
+            
+            if (is2_5DMode) {
+                btn.textContent = '🔄 2.5D: ON';
+                btn.classList.add('active');
+                init2_5D();
+                canvas3d.classList.add('active');
+            } else {
+                btn.textContent = '🔄 2.5D: OFF';
+                btn.classList.remove('active');
+                canvas3d.classList.remove('active');
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+            }
+        }
+
+        // Initialize 2.5D Scene
+        function init2_5D() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x1a1a2e, 0.002);
+            scene.background = new THREE.Color(0x1a1a2e);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                2000
+            );
+            camera.position.set(40, 30, 40);
+            camera.lookAt(0, 15, 0);
+
+            // Renderer
+            const canvas = document.getElementById('canvas3d');
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                alpha: true, 
+                antialias: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.maxPolarAngle = Math.PI/2 - 0.05;
+
+            // Lights
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            const sunLight = new THREE.DirectionalLight(0xffeecc, 0.8);
+            sunLight.position.set(30, 40, 20);
+            scene.add(sunLight);
+
+            // Ground
+            createGround();
+
+            // Clouds (placeholder - will be updated from simulation)
+            createClouds();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Start animation loop
+            animate2_5D();
+        }
+
+        function createGround() {
+            const geometry = new THREE.PlaneGeometry(200, 200, 50, 50);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x2d3436, 
+                roughness: 0.9,
+                side: THREE.DoubleSide
+            });
+            groundMesh = new THREE.Mesh(geometry, material);
+            groundMesh.rotation.x = -Math.PI/2;
+            groundMesh.position.y = -1;
+            scene.add(groundMesh);
+        }
+
+        function createClouds() {
+            const GRID_X = 40;
+            const GRID_Y = 40;
+            const count = GRID_X * GRID_Y;
+            
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.75,
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            
+            cloudMesh = new THREE.InstancedMesh(geometry, material, count);
+            cloudMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            scene.add(cloudMesh);
+            
+            const colors = new Float32Array(count * 3);
+            cloudMesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+        }
+
+        function updateCloudsFromSimulation() {
+            if (!cloudMesh || !is2_5DMode) return;
+            
+            const GRID_X = 40;
+            const GRID_Y = 40;
+            const dummy = new THREE.Object3D();
+            const colors = cloudMesh.instanceColor.array;
+            
+            // Generate procedural clouds (in real implementation, read from simulation textures)
+            let colorIndex = 0;
+            for (let gx = 0; gx < GRID_X; gx++) {
+                for (let gy = 0; gy < GRID_Y; gy++) {
+                    const idx = gx + gy * GRID_X;
+                    
+                    // Simulated cloud density (replace with actual simulation data)
+                    const density = Math.max(0, Math.sin(gx * 0.2 + Date.now() * 0.0001) * 
+                                            Math.cos(gy * 0.15) * 0.5 + Math.random() * 0.3);
+                    
+                    if (density > 0.15) {
+                        dummy.position.set(
+                            (gx - GRID_X/2) * 1.0,
+                            density * 8 + 2,
+                            (gy - GRID_Y/2) * 1.0
+                        );
+                        
+                        const scale = 0.4 + density * 1.2;
+                        dummy.scale.set(scale, scale * 1.5, scale);
+                        dummy.updateMatrix();
+                        cloudMesh.setMatrixAt(idx, dummy.matrix);
+                        
+                        const gray = 1.0 - density * 0.6;
+                        colors[colorIndex++] = Math.max(0.4, gray);
+                        colors[colorIndex++] = Math.max(0.4, gray);
+                        colors[colorIndex++] = Math.max(0.5, gray + 0.1);
+                    } else {
+                        dummy.scale.set(0, 0, 0);
+                        dummy.updateMatrix();
+                        cloudMesh.setMatrixAt(idx, dummy.matrix);
+                    }
+                }
+            }
+            
+            cloudMesh.instanceMatrix.needsUpdate = true;
+            cloudMesh.instanceColor.needsUpdate = true;
+        }
+
+        function animate2_5D() {
+            if (!is2_5DMode) return;
+            
+            animationId = requestAnimationFrame(animate2_5D);
+            
+            updateCloudsFromSimulation();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Keyboard shortcuts for 2.5D
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'KeyR' && is2_5DMode) {
+                // Reset camera
+                camera.position.set(40, 30, 40);
+                camera.lookAt(0, 15, 0);
+            } else if (event.code === 'KeyT' && is2_5DMode) {
+                // Top view
+                camera.position.set(0, 100, 0);
+                camera.lookAt(0, 0, 0);
+            } else if (event.code === 'KeyS' && is2_5DMode) {
+                // Side view
+                camera.position.set(0, 20, 80);
+                camera.lookAt(0, 15, 0);
+            }
+        });
+    </script>
 </body>
 
 </html>
