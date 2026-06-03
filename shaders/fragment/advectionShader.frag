@@ -213,10 +213,11 @@ void main()
       float tempC = KtoC(potentialToRealT(baseX0Yp[TEMPERATURE])); // temperature of cell above
 
       if (water[SNOW] > 0.0 && tempC > 0.0) {                      // snow melting on ground
-        float melting = min(tempC * snowMeltRate, water[SNOW]);
-        water[SNOW] -= melting;
-        base[TEMPERATURE] += melting / snowMassToHeight * meltingHeat; // signal snow melting mass, cooling will be applied in pressure shader
-        water[SOIL_MOISTURE] += melting;                               // melting snow adds water to soil
+        float snowMelt = min(tempC * snowMeltRate, water[SNOW]);
+        float snowMelt_mass = snowMelt / rainMassToHeight;         // mass of snow melted
+        water[SNOW] -= snowMelt;
+        base[TEMPERATURE] += snowMelt_mass * meltingHeat;          // signal snow melting mass, cooling will be applied in pressure shader
+        water[SOIL_MOISTURE] += snowMelt;                          // melting snow adds water to soil
       }
 
       if (water[SOIL_MOISTURE] > 0.0 && tempC > 0.0) { // water evaporating from ground

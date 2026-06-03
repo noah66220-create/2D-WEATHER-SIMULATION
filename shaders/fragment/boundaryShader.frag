@@ -18,6 +18,7 @@ uniform isampler2D wallTex;
 uniform sampler2D lightTex;
 uniform sampler2D precipFeedbackTex;
 uniform sampler2D precipDepositionTex;
+uniform sampler2D layerAvgDensTex;
 
 uniform float dryLapse;
 uniform float evapHeat;
@@ -134,19 +135,28 @@ void main()
     // temperature is calculated for Vy location
     vec4 baseX0Yp = texture(baseTex, texCoordX0Yp);
 
-#define gravMult 0.0001 // 0.0001 0.0005
+#define gravMult 0.0005 // 0.0001 0.0005
 
     // gravity for convection interpolated between this and above cell to fix wierd waves
     // Because vertical velocity is defined at the top of the cell while temperature is defined in it's center.
-    float gravityForce = ((base[TEMPERATURE] + baseX0Yp[TEMPERATURE]) * 0.5 - (getInitialT(int(fragCoord.y)) + getInitialT(int(fragCoord.y) + 1)) * 0.5) * gravMult;
+    // float gravityForce = ((base[TEMPERATURE] + baseX0Yp[TEMPERATURE]) * 0.5 - (getInitialT(int(fragCoord.y)) + getInitialT(int(fragCoord.y) + 1)) * 0.5) * gravMult;
+
+    float T_avg = texture(layerAvgDensTex, texCoord)[0];
+
+    // float gravityForce = (base[TEMPERATURE] - T_avg) * gravMult;
 
     // float gravityForce = (base[3] - initial_T[int(fragCoord.y)]) * gravMult;
 
-    gravityForce -= water[CLOUD] * gravMult * waterWeight;         // cloud water weight added to gravity force
+    // gravityForce -= water[CLOUD] * gravMult * waterWeight;         // cloud water weight added to gravity force
 
-    gravityForce -= precipFeedback[MASS] * gravMult * waterWeight; // precipitation weigth added to gravity force
+    // gravityForce -= precipFeedback[MASS] * gravMult * waterWeight; // precipitation weigth added to gravity force
 
-    base[VY] += gravityForce;
+    const float dt = 0.288;                                           // seconds per timestep
+
+    float accel = (9.81 * (base[TEMPERATURE] - T_avg) / 293.0) / 40.; // m/s²
+    base[VY] += accel * dt;                                           // dt in seconds
+
+    // base[VY] += gravityForce;
 
     // base.x += sin(texCoord.x * PI * 2.0 + iterNum * 0.000005) * (1. - texCoord.y) * 0.00015; // phantom force to simulate high and low pressure areas
 
@@ -410,9 +420,9 @@ void main()
               wall[TYPE] = WALLTYPE_LAND;             // turn off fire
           }
         }
-      case WALLTYPE_LAND:                                                                                          // no break,can also be fire or urban:
-        water[SOIL_MOISTURE] = clamp(water[SOIL_MOISTURE] + precipDeposition[RAIN_DEPOSITION] * 0.1, 0.0, 1000.0); // rain accumulation
-        water[SNOW] = clamp(water[SNOW] + precipDeposition[SNOW_DEPOSITION] * snowMassToHeight, 0.0, 4000.0);      // snow accumulation in cm
+      case WALLTYPE_LAND:                                                                                                       // no break,can also be fire or urban:
+        water[SOIL_MOISTURE] = clamp(water[SOIL_MOISTURE] + precipDeposition[RAIN_DEPOSITION] * rainMassToHeight, 0.0, 1000.0); // rain accumulation in mm
+        water[SNOW] = clamp(water[SNOW] + precipDeposition[SNOW_DEPOSITION] * rainMassToHeight, 0.0, 4000.0);                   // snow accumulation in cm
 
 
         vec4 baseAboveSurface = texture(baseTex, texCoordX0Yp);
@@ -420,7 +430,7 @@ void main()
 
         float realTempAboveSurface = potentialToRealT(baseAboveSurface[TEMPERATURE], texCoordX0Yp.y);
 
-        float evaporation = calcEvaporation(realTempAboveSurface, waterAboveSurface[TOTAL], float(wall[VEGETATION]), water[SOIL_MOISTURE]) * 0.10;
+        float evaporation = calcEvaporation(realTempAboveSurface, waterAboveSurface[TOTAL], float(wall[VEGETATION]), water[SOIL_MOISTURE]) * rainMassToHeight;
 
         water[SOIL_MOISTURE] -= evaporation;
 

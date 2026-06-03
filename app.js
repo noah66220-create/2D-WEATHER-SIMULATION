@@ -296,7 +296,7 @@ function createStationSelect()
     option.innerHTML = key + ' ' + value.lat.toFixed(1) + '° N';
     select.appendChild(option);
   }
-  select.value = 10868;
+  select.value = 16064; // Milan
 
   select.onchange = function() {
     startLatitude = Object.values(soundingStations)[select.selectedIndex].lat;
@@ -451,12 +451,27 @@ const timePerIteration = 0.00008; // in hours (0.00008 = 0.288 sec, at 40m cell 
 var NUM_DROPLETS;
 const NUM_DROPLETS_DEVIDER = 25; // 25
 
+const valsPerDroplet = 5;
+
+var even = true; // used to switch between precipitation buffers
+
+var precipitationVao_0;
+var precipVertexBuffer_0;
+var precipitationTF_0;
+var precipitationVao_1;
+var precipVertexBuffer_1;
+var precipitationTF_1;
+
 let hdrFBO;
 
 let bloomFBOs = [];
 
 let ambientLightFBOs = [];
 let emittedLightFBO;
+
+let layerAvgDensFBOs = [];
+
+layerAvgDensFBO_new = 1;
 
 
 function clamp(num, min, max) { return Math.min(Math.max(num, min), max); }
@@ -1252,6 +1267,234 @@ class Weatherstation
 
 let weatherStations = []; // array holding all weather stations
 
+class GlobalWaterChart
+{
+  #width = 120; // 100 display size
+  #height = 70; // 55
+  #mainDiv;
+  #c;           // 2d canvas context
+
+  #hidden;
+
+  #time;      // ISO time string of moment of last measurement
+  #total = 0; // mm
+  #vapor = 0;
+  #cloud = 0;
+  #precip = 0;
+  #soil = 0;
+
+  #chartCanvas;
+  #historyChart;
+
+  constructor()
+  {
+    this.#mainDiv = document.createElement('div');
+    document.body.appendChild(this.#mainDiv);
+
+    this.#mainDiv.style.position = 'absolute';
+    this.#mainDiv.style.width = '0px';
+    this.#mainDiv.style.height = '0px';
+
+    this.#hidden = true;
+
+    this.createChartJSCanvas();
+  }
+
+  createChartJSCanvas()
+  {
+    this.#chartCanvas = document.createElement('canvas');
+
+    this.#mainDiv.appendChild(this.#chartCanvas);
+
+    const ctx = this.#chartCanvas.getContext('2d');
+
+    this.#chartCanvas.height = 1300;
+    this.#chartCanvas.width = 1000;
+
+    let style = this.#chartCanvas.style;
+
+    style.marginTop = '100px';
+
+    style.position = 'relative';
+
+    style.left = '0px';
+
+    style.display = 'none';
+
+
+    this.#historyChart = new Chart(ctx, {
+      type : 'line',
+      data : {
+        labels : [],                                                                                                                                      // Time-based labels
+        datasets : [
+          {label : 'Total', data : [], backgroundColor : '#ff0000', borderColor : '#ff0000', radius : 0, borderWidth : 1, fill : false, hidden : true},   //
+          {label : 'Vapor', data : [], backgroundColor : '#b4faff', borderColor : '#b4faff', radius : 0, borderWidth : 1, fill : false, hidden : false},  //
+          {label : 'Cloud', data : [], backgroundColor : '#ffffff', borderColor : '#ffffff', radius : 0, borderWidth : 1, fill : false, hidden : false},  //
+          {label : 'Precip', data : [], backgroundColor : '#0044ff', borderColor : '#0044ff', radius : 0, borderWidth : 1, fill : false, hidden : false}, //
+          {label : 'Soil', data : [], backgroundColor : '#803c00', borderColor : '#803c00', radius : 0, borderWidth : 1, fill : false, hidden : false}    //
+        ]
+      },
+      options : {
+        scales : {
+          x : {
+            type : 'time', // Set the x-axis to use a time scale
+            time : {unit : 'minute', tooltipFormat : 'HH:mm'},
+            title : {
+              display : true,
+              color : 'white' // Make sure title color is white
+            },
+            ticks : {
+              color : 'white' // White color for the x-axis labels
+            },
+            grid : {
+              color : 'rgba(255, 255, 255, 0.2)' // Optional: light white for grid lines
+            }
+          },
+          y : {
+            beginAtZero : true, // Start the y-axis at 0
+            min : 0,
+            ticks : {
+              color : 'white' // White color for the y-axis labels
+            },
+            title : {
+              display : true,
+              color : 'white' // Make sure title color is white
+            },
+            grid : {
+              color : 'rgba(255, 255, 255, 0.2)' // Optional: light white for grid lines
+            }
+          }
+        },
+        plugins : {
+          legend : {
+            display : true,
+            labels : {
+              color : 'white', // White color for legend text
+              font : {
+                size : 14,
+                family : 'Arial' // Optional: Ensure font family is set
+              },
+              filter : function(item, chart) { return !chart.datasets[item.datasetIndex].reallyHidden; }
+            }
+          }
+        },
+        responsive : false, // Auto rescale on canvas resize
+        maintainAspectRatio : false,
+        animation : false,  // Disables all animations
+        normalized : true
+        // parsing : false
+      }
+    });
+  }
+
+  updateChartJS() // add newest measurement to chart
+  {
+    if (this.#historyChart) {
+      this.#historyChart.data.datasets[0].data.push(this.#total);
+      this.#historyChart.data.datasets[1].data.push(this.#vapor);
+      this.#historyChart.data.datasets[2].data.push(this.#cloud);
+      this.#historyChart.data.datasets[3].data.push(this.#precip);
+      this.#historyChart.data.datasets[4].data.push(this.#soil);
+
+      this.#historyChart.data.labels.push(this.#time);
+
+      if (this.#historyChart.data.labels.length > 60 * 24) { // max 24 hour history. Remove the oldest data and label
+        this.#historyChart.data.labels.shift();
+        this.#historyChart.data.datasets.forEach(dataSet => { dataSet.data.shift(); });
+      }
+
+      this.#historyChart.update();
+    }
+  }
+
+  clearChart()
+  {
+    this.#historyChart.data.datasets.forEach(dataSet => { dataSet.data = []; });
+    this.#historyChart.data.labels = [];
+    this.#historyChart.update();
+  }
+
+  measure()
+  {
+    if (this.#hidden)
+      return;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuff_0);
+    gl.readBuffer(gl.COLOR_ATTACHMENT1); // watertexture
+    var waterTextureValues = new Float32Array(sim_res_x * sim_res_y * 4);
+    gl.readPixels(0, 0, sim_res_x, sim_res_y, gl.RGBA, gl.FLOAT, waterTextureValues);
+    gl.readBuffer(gl.COLOR_ATTACHMENT2); // walltexture
+    var wallTextureValues = new Int8Array(sim_res_x * sim_res_y * 4);
+    gl.readPixels(0, 0, sim_res_x, sim_res_y, gl.RGBA_INTEGER, gl.BYTE, wallTextureValues);
+
+    let vaporPlusCloudWater = 0.0;
+    let totalWaterVapor = 0.0;
+    let totalCloudWater = 0.0;
+    let totalSoilWater = 0.0;
+
+    for (let x = 0; x < sim_res_x; x++) {
+      for (let y = 0; y < sim_res_y; y++) {
+        let cellInd = (x + y * sim_res_x) * 4;
+        let vaporPlusCloud = waterTextureValues[cellInd + 0];
+        let cloud = waterTextureValues[cellInd + 1];
+
+        let wallType = wallTextureValues[cellInd + 0];
+        let wallVertDist = wallTextureValues[cellInd + 2];
+
+        if (wallVertDist > 0) { // fluid
+          vaporPlusCloudWater += vaporPlusCloud;
+          totalCloudWater += cloud;
+          totalWaterVapor += vaporPlusCloud - cloud;
+
+        } else if (wallVertDist == 0 && wallType != 2) { // land surface
+          let soilMoisture = waterTextureValues[cellInd + 2];
+          let snow = waterTextureValues[cellInd + 3];
+
+          totalSoilWater += soilMoisture + snow;
+        }
+      }
+    }
+
+    const rainMassToHeight = 0.04;
+
+    this.#vapor = totalWaterVapor / sim_res_x * rainMassToHeight;
+    this.#cloud = totalCloudWater / sim_res_x * rainMassToHeight;
+    this.#soil = totalSoilWater / sim_res_x;
+
+    // read data from all droplets:
+    let tempDroplets = new Float32Array(valsPerDroplet * NUM_DROPLETS);
+    gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER, even ? precipVertexBuffer_0 : precipVertexBuffer_1); // x, y, water, ice, density
+    gl.getBufferSubData(gl.TRANSFORM_FEEDBACK_BUFFER, 0, tempDroplets);
+
+    let totalPrecipWater = 0.;
+
+    for (let n = 0; n < NUM_DROPLETS; n++) {
+      let i = n * valsPerDroplet;
+      let water = tempDroplets[i + 2];
+      let ice = tempDroplets[i + 3];
+
+      if (water >= 0.) { // if droplet is active
+        totalPrecipWater += water;
+        totalPrecipWater += ice;
+      }
+    }
+
+    this.#precip = totalPrecipWater / sim_res_x * rainMassToHeight;
+    this.#total = (vaporPlusCloudWater + totalPrecipWater) / sim_res_x * rainMassToHeight + this.#soil;
+
+
+    this.#time = simDateTime.toISOString();
+    this.updateChartJS(); // update chart
+  }
+
+  toggleHidden()
+  {
+    this.#hidden = !this.#hidden;
+    this.#mainDiv.style.display = this.#hidden ? 'none' : 'block';
+    this.#chartCanvas.style.display = this.#hidden ? 'none' : 'block';
+  }
+}
+
+let globalWaterChart;
 
 async function loadData()
 {
@@ -1494,11 +1737,11 @@ async function prepareSounding()
 
 async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initialRainDrops)
 {
-
-
   await setLoadingBar();
 
   let lastSaveTime = new Date();
+
+  globalWaterChart = new GlobalWaterChart();
 
   class Camera
   {
@@ -3826,11 +4069,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
         'miles / ft / inch' : 'LENGTH_UNIT_IMPERIAL',
       })
       .name('Length Unit')
-      .onChange(function() {
-        for (i = 0; i < weatherStations.length; i++) {
-          weatherStations[i].clearChart();
-        }
-      });
+      .onChange(function() { clearWeatherStations(); });
 
     display_folder
       .add(guiControls, 'speedUnit', {
@@ -3840,11 +4079,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
         'kt' : 'SPEED_UNIT_KT',
       })
       .name('Speed Unit')
-      .onChange(function() {
-        for (i = 0; i < weatherStations.length; i++) {
-          weatherStations[i].clearChart();
-        }
-      });
+      .onChange(function() { clearWeatherStations(); });
 
     display_folder
       .add(guiControls, 'tempUnit', {
@@ -3853,11 +4088,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
         'K' : 'TEMP_UNIT_K',
       })
       .name('Temperature Unit')
-      .onChange(function() {
-        for (i = 0; i < weatherStations.length; i++) {
-          weatherStations[i].clearChart();
-        }
-      });
+      .onChange(function() { clearWeatherStations(); });
 
 
     var advanced_folder = datGui.addFolder('Advanced');
@@ -3905,9 +4136,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
     gl.uniform1f(gl.getUniformLocation(postProcessingProgram, 'exposure'), guiControls.exposure);
     datGui.show(); // unhide
 
-    clockEl = document.createElement('div');
-    document.body.appendChild(clockEl);
-
+    clockEl = document.getElementById('clockEl');
     clockEl.innerHTML = ''
     clockEl.style.position = 'absolute';
     clockEl.style.fontFamily = 'Monospace';
@@ -4539,6 +4768,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
     } else if (event.code == 'KeyS') {
       // S: log sample at mouse location
       logSample();
+      globalWaterChart.toggleHidden();
     } else if (event.code == 'KeyZ') {
       zPressed = true;
     } else if (event.code == 'KeyX') {
@@ -4759,6 +4989,8 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   const isolateBrightPartsShader = await loadShader('isolateBrightPartsShader.frag');
   const bloomBlurShader = await loadShader('bloomBlurShader.frag');
 
+  const layerAvgDensShader = await loadShader('layerAvgDensShader.frag');
+
 
   // create programs
   const pressureProgram = createProgram(simVertexShader, pressureShader);
@@ -4786,7 +5018,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   const postProcessingProgram = createProgram(postProcessingVertexShader, postProcessingShader);
   const isolateBrightPartsProgram = createProgram(postProcessingVertexShader, isolateBrightPartsShader);
   const bloomBlurProgram = createProgram(postProcessingVertexShader, bloomBlurShader);
-  // const lightBlurProgram = createProgram(postProcessingVertexShader, bloomBlurShader);
+  const layerAvgDensProgram = createProgram(simVertexShader, layerAvgDensShader);
 
 
   await loadingBar.set(80, 'Setting up textures');
@@ -4917,14 +5149,12 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   const massAttribLocation = 1;
   const densityAttribLocation = 2;
 
-  var even = true; // used to switch between precipitation buffers
-
-  const precipitationVao_0 = gl.createVertexArray();
-  const precipVertexBuffer_0 = gl.createBuffer();
-  const precipitationTF_0 = gl.createTransformFeedback();
-  const precipitationVao_1 = gl.createVertexArray();
-  const precipVertexBuffer_1 = gl.createBuffer();
-  const precipitationTF_1 = gl.createTransformFeedback();
+  precipitationVao_0 = gl.createVertexArray();
+  precipVertexBuffer_0 = gl.createBuffer();
+  precipitationTF_0 = gl.createTransformFeedback();
+  precipitationVao_1 = gl.createVertexArray();
+  precipVertexBuffer_1 = gl.createBuffer();
+  precipitationTF_1 = gl.createTransformFeedback();
 
 
   var rainDrops;
@@ -5032,8 +5262,6 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
     gl.bindVertexArray(fluidVao);         // set screenfilling rect again
   }
 
-
-  const valsPerDroplet = 5;
 
   function logDropletsAndToggleFollow()
   {
@@ -5260,6 +5488,8 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
+    layerAvgDensFBOs[0] = new FBO(1, sim_res_y, gl.R32F, gl.RED, gl.FLOAT, gl.LINEAR);
+    layerAvgDensFBOs[1] = new FBO(1, sim_res_y, gl.R32F, gl.RED, gl.FLOAT, gl.LINEAR);
 
     lastSaveTime = new Date();
   }
@@ -5514,6 +5744,9 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   gl.uniform1f(gl.getUniformLocation(setupProgram, 'simHeight'), guiControls.simHeight);
 
   gl.uniform4fv(gl.getUniformLocation(setupProgram, 'initial_Tv'), initial_T);
+  gl.uniform4fv(gl.getUniformLocation(setupProgram, 'realWorldSounding_Tv'), realWorldSounding_T);
+  gl.uniform4fv(gl.getUniformLocation(setupProgram, 'realWorldSounding_Wv'), realWorldSounding_W);
+  gl.uniform4fv(gl.getUniformLocation(setupProgram, 'realWorldSounding_Velv'), realWorldSounding_Vel);
 
   gl.useProgram(advectionProgram);
   gl.uniform1i(gl.getUniformLocation(advectionProgram, 'baseTex'), 0);
@@ -5557,6 +5790,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   gl.uniform1i(gl.getUniformLocation(boundaryProgram, 'lightTex'), 4);
   gl.uniform1i(gl.getUniformLocation(boundaryProgram, 'precipFeedbackTex'), 5);
   gl.uniform1i(gl.getUniformLocation(boundaryProgram, 'precipDepositionTex'), 6);
+  gl.uniform1i(gl.getUniformLocation(boundaryProgram, 'layerAvgDensTex'), 7);
   gl.uniform2f(gl.getUniformLocation(boundaryProgram, 'resolution'), sim_res_x, sim_res_y);
   gl.uniform2f(gl.getUniformLocation(boundaryProgram, 'texelSize'), texelSizeX, texelSizeY);
   gl.uniform1f(gl.getUniformLocation(boundaryProgram, 'vorticity'),
@@ -5567,6 +5801,15 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   // gl.uniform1fv(gl.getUniformLocation(boundaryProgram, 'initial_T'), initial_T);
   gl.uniform4fv(gl.getUniformLocation(boundaryProgram, 'initial_Tv'), initial_T);
   gl.uniform1i(gl.getUniformLocation(boundaryProgram, 'allowCaves'), guiControls.allowCaves ? 1 : 0);
+
+  gl.useProgram(layerAvgDensProgram);
+  gl.uniform1i(gl.getUniformLocation(layerAvgDensProgram, 'baseTex'), 0);
+  gl.uniform1i(gl.getUniformLocation(layerAvgDensProgram, 'waterTex'), 1);
+  gl.uniform1i(gl.getUniformLocation(layerAvgDensProgram, 'wallTex'), 3);
+  gl.uniform1i(gl.getUniformLocation(layerAvgDensProgram, 'densTex'), 4);
+  gl.uniform2f(gl.getUniformLocation(layerAvgDensProgram, 'resolution'), sim_res_x, sim_res_y);
+  gl.uniform2f(gl.getUniformLocation(layerAvgDensProgram, 'texelSize'), texelSizeX, texelSizeY);
+  gl.uniform1i(gl.getUniformLocation(layerAvgDensProgram, 'baseTex'), 0);
 
   gl.useProgram(curlProgram);
   gl.uniform2f(gl.getUniformLocation(curlProgram, 'texelSize'), texelSizeX, texelSizeY);
@@ -5719,6 +5962,13 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
 
   for (i = 0; i < weatherStations.length; i++) { // initial measurement at weather stations
     weatherStations[i].measure();
+  }
+
+  function clearWeatherStations()
+  {
+    for (i = 0; i < weatherStations.length; i++) {
+      weatherStations[i].clearChart();
+    }
   }
 
   setInterval(calcFps, 1000); // log fps
@@ -5901,6 +6151,19 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
             gl.drawBuffers([ gl.COLOR_ATTACHMENT0 ]);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
+            gl.useProgram(layerAvgDensProgram);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, baseTexture_1);
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, waterTexture_1);
+            gl.activeTexture(gl.TEXTURE3);
+            gl.bindTexture(gl.TEXTURE_2D, wallTexture_1);
+            gl.activeTexture(gl.TEXTURE4);
+            gl.bindTexture(gl.TEXTURE_2D, layerAvgDensFBOs[layerAvgDensFBO_new == 1 ? 0 : 1].texture);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, layerAvgDensFBOs[layerAvgDensFBO_new].frameBuffer);
+            gl.drawBuffers([ gl.COLOR_ATTACHMENT0 ]);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
             // apply vorticity, boundary conditions and user input
             gl.useProgram(boundaryProgram);
             gl.uniform1f(uniformLocation_boundaryProgram_iterNum, iterNum);
@@ -5918,11 +6181,13 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
             gl.bindTexture(gl.TEXTURE_2D, precipitationFeedbackTexture);
             gl.activeTexture(gl.TEXTURE6);
             gl.bindTexture(gl.TEXTURE_2D, precipitationDepositionTexture);
-
-
+            gl.activeTexture(gl.TEXTURE7);
+            gl.bindTexture(gl.TEXTURE_2D, layerAvgDensFBOs[layerAvgDensFBO_new].texture);
             gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuff_0);
             gl.drawBuffers([ gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2 ]);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+            layerAvgDensFBO_new = layerAvgDensFBO_new == 1 ? 0 : 1
 
             // calc and apply advection
             gl.useProgram(advectionProgram);
@@ -6045,6 +6310,7 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
               for (i = 0; i < weatherStations.length; i++) {
                 weatherStations[i].measure();
               }
+              globalWaterChart.measure();
             }
             if (!airplaneMode) {
               iterNum++;
@@ -6572,9 +6838,8 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
         guiControls.timeOfDay = simDateTime.getHours() + simDateTime.getMinutes() / 60. + simDateTime.getSeconds() / 3600.;
         guiControls.month = simDateTime.getMonth() + 1 + simDateTime.getDate() / 30.5 + simDateTime.getHours() / 720.;
       } else {
-        for (i = 0; i < weatherStations.length; i++) {
-          weatherStations[i].clearChart();
-        }
+        clearWeatherStations();
+        globalWaterChart.clearChart();
       }
 
       let timeOfDayRad = (guiControls.timeOfDay / 24.0) * 2.0 * Math.PI; // convert to radians
@@ -6790,33 +7055,6 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
             adjIterPerFrame(1);
         }
       }
-      // calculate total amounts of water and smoke for verification of fluid simulation
-      /*
-            gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuff_1);
-            gl.readBuffer(gl.COLOR_ATTACHMENT1); // watertexture
-            var waterTextureValues = new Float32Array(sim_res_x * sim_res_y * 4);
-            gl.readPixels(0, 0, sim_res_x, sim_res_y, gl.RGBA, gl.FLOAT, waterTextureValues);
-
-            let totalWaterVapor = 0.0;
-            let totalCloudWater = 0.0;
-            let totalSmoke = 0.0;
-
-            for (let x = 0; x < sim_res_x; x++) {
-              for (let y = 0; y < sim_res_y; y++) {
-                let cellInd = (x + y * sim_res_x) * 4;
-                let vapor = waterTextureValues[cellInd + 0];
-                if (vapor < 1000.0) { // ignore wall
-                  totalCloudWater += waterTextureValues[cellInd + 1];
-                  totalWaterVapor += vapor;
-
-                  totalSmoke += waterTextureValues[cellInd + 3];
-                }
-              }
-            }
-
-            let totalWater = totalWaterVapor + totalCloudWater;
-            console.log('Water  Vapor  Cloud  Smoke\n', Math.round(totalWater), Math.round(totalWaterVapor), Math.round(totalCloudWater), Math.round(totalSmoke));
-            */
     }
   }
 } // end of mainscript

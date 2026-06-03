@@ -19,7 +19,13 @@ precision highp isampler2D;
 #define fullGreenSoilMoisture 50.0 // level of soil moisture where vegetation reaches the greenest color
 
 #define fullWhiteSnowHeight 10.0   // snow height at witch full whiteness is displayed and max albedo is achieved
-#define snowMassToHeight 0.05
+
+#define rainMassToHeight 0.04      // 1 g / 40 (cellHeight) = 0.04 mm   or 0.04 cm of snow
+
+// #define rainHeightToSnowHeight 10. // fresh snow is on average 10x less dense than water
+
+// #define snowMassToHeight (rainMassToHeight * rainHeightToSnowHeight)
+
 
 #define snowMeltRate 0.000015
 

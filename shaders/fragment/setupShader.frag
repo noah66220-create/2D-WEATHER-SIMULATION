@@ -12,8 +12,14 @@ uniform float seed;
 uniform float heightMult;
 
 uniform vec4 initial_Tv[126];
+uniform vec4 realWorldSounding_Tv[126];
+uniform vec4 realWorldSounding_Wv[126];
+uniform vec4 realWorldSounding_Velv[126];
 
 float getInitialT(int y) { return initial_Tv[y / 4][y % 4]; }
+float getRealWorldSounding_T(int y) { return (realWorldSounding_Tv[y / 4][y % 4] + realWorldSounding_Tv[(y - 1) / 4][(y - 1) % 4]) / 2.; }
+float getRealWorldSounding_W(int y) { return (realWorldSounding_Wv[y / 4][y % 4] + realWorldSounding_Wv[(y - 1) / 4][(y - 1) % 4]) / 2.; }
+float getRealWorldSounding_Vel(int y) { return (realWorldSounding_Velv[y / 4][y % 4] + realWorldSounding_Velv[(y - 1) / 4][(y - 1) % 4]) / 2.; }
 
 in vec2 texCoord;
 in vec2 fragCoord;
@@ -77,14 +83,22 @@ void main()
     }
   } else {                                                                                                    // air, not wall
     wall[DISTANCE] = 255;                                                                                     // reset distance to wall
-    base[TEMPERATURE] = getInitialT(int(texCoord.y * (1.0 / texelSize.y)));                                   // set temperature
+    // base[TEMPERATURE] = getInitialT(int(texCoord.y * (1.0 / texelSize.y)));                                   // set temperature
+    //  float realTemp = potentialToRealT(base[TEMPERATURE]);
+    // if (texCoord.y < 0.20) // set dew point
+    //   water[TOTAL] = maxWater(realTemp - 2.0);
+    // else
+    //   water[TOTAL] = maxWater(realTemp - 20.0);
+
+
+    int soundingArrayindex = int(texCoord.y * (1.0 / texelSize.y));
+    base[TEMPERATURE] = getRealWorldSounding_T(soundingArrayindex);
 
     float realTemp = potentialToRealT(base[TEMPERATURE]);
 
-    if (texCoord.y < 0.20) // set dew point
-      water[TOTAL] = maxWater(realTemp - 2.0);
-    else
-      water[TOTAL] = maxWater(realTemp - 20.0);
+    water[TOTAL] = getRealWorldSounding_W(soundingArrayindex);
+
+    base.x = getRealWorldSounding_Vel(soundingArrayindex);
 
     water[CLOUD] = max(water[TOTAL] - maxWater(realTemp), 0.0); // calculate cloud water
   }

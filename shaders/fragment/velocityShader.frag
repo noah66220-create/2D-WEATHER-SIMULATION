@@ -56,7 +56,7 @@ void main()
     }
 
     base[VY] += base[PRESSURE] - baseX0Yp[PRESSURE];
-    base[VY] *= 1. - dragMultiplier * 0.0002;
+    base[VY] *= 1. - (dragMultiplier + 10.) * 0.0002;
     // quadratic drag
     // base[VX] -= base[VX] * base[VX] * base[VX] * base[VX] * base[VX] *
     // dragMultiplier; base[VY] -= base[VY] * base[VY] * base[VY] * base[VY] *

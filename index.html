@@ -296,7 +296,7 @@
                 </div>
                 <div>
                     <select id="stationSelect"></select>
-                    <input type="date" id="datePicker" value="2025-06-15" min="2010-01-01"
+                    <input type="date" id="datePicker" value="2025-07-24" min="2010-01-01"
                         onchange="prepareSounding();" />
 
                     <select id="hourSelector" onchange="prepareSounding();">
@@ -530,6 +530,10 @@
                     <td>Reload From Save File</td>
                 </tr>
                 <tr>
+                    <td>S</td>
+                    <td>Log sample and toggle global water chart</td>
+                </tr>
+                <tr>
                     <td>Home</td>
                     <td>1 Iteration/sec</td>
                 </tr>
@@ -548,18 +552,20 @@
             </table>
         </div>
 
-        <div class="support">
-            <h1 style="color: rgb(0, 255, 0)">$ Support me on Patreon $</h1>
-            If you love my project and want to support its future development, please consider <a
-                href="https://www.patreon.com/user?u=76043935" target="_blank" rel="noopener noreferrer"
-                style="color: white">supporting me on patreon</a>
-            <br />
-            Every small amount helps! Thank you!
-            <br />
-            <br />
-            <br />
-            <i>By Niels Daemen</i>
-        </div>
+        <a href="https://www.patreon.com/user?u=76043935" target="_blank" rel="noopener noreferrer"
+            style="color: white; text-decoration: none;">
+            <div class="support">
+                <h1 style="color: rgb(0, 255, 0)">$ Support me on Patreon $</h1>
+                If you love my project and want to support its future development, please consider supporting
+                me on patreon
+                <br />
+                Every small amount helps! Thank you!
+                <br />
+                <br />
+                <br />
+                <i>By Niels Daemen</i>
+            </div>
+        </a>
     </div>
 
     </div>
@@ -570,6 +576,8 @@
     <canvas id="mainCanvas">
         Your browser does not support HTML5, you must be using a really old browser!
     </canvas>
+
+    <div id="clockEl"></div>
 </body>
 
 </html>
