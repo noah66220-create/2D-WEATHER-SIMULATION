@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather Admin Panel</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #0b0f16;
+      color: white;
+    }
+
+    /* ADMIN PANEL */
+
+    .admin-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 330px;
+      background: #111722;
+      border: 1px solid #293344;
+      border-radius: 14px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+      z-index: 9999;
+    }
+
+    .admin-header {
+      padding: 18px 20px;
+      background: #171e2b;
+      border-bottom: 1px solid #293344;
+    }
+
+    .admin-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .admin-header p {
+      margin-top: 5px;
+      color: #7f8ba0;
+      font-size: 12px;
+    }
+
+    .admin-content {
+      padding: 16px;
+    }
+
+    .section-title {
+      color: #8d99ad;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .storm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .storm-button {
+      border: 1px solid #303b4e;
+      background: #1a2230;
+      color: #e9edf4;
+      border-radius: 9px;
+      padding: 13px 8px;
+      cursor: pointer;
+      transition: 0.15s;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .storm-button:hover {
+      background: #263144;
+      border-color: #52627c;
+      transform: translateY(-1px);
+    }
+
+    .storm-button:active {
+      transform: scale(0.97);
+    }
+
+    .storm-button.derecho {
+      grid-column: span 2;
+      background: #202b3d;
+    }
+
+    .storm-icon {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 7px;
+    }
+
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #0c1119;
+      border: 1px solid #252e3d;
+      font-size: 12px;
+      color: #8995a8;
+    }
+
+    .status span {
+      color: #55d68a;
+      font-weight: bold;
+    }
+
+    .danger-button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 11px;
+      border: 1px solid #563238;
+      border-radius: 8px;
+      background: #241519;
+      color: #ff8d96;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .danger-button:hover {
+      background: #321b20;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TON ADMIN PANEL -->
+
+  <div class="admin-panel">
+
+    <div class="admin-header">
+      <h2>⚡ Weather Admin</h2>
+      <p>Storm Control Panel</p>
+    </div>
+
+    <div class="admin-content">
+
+      <div class="section-title">
+        Spawn Storm
+      </div>
+
+      <div class="storm-grid">
+
+        <button class="storm-button derecho"
+                onclick="spawnStorm('derecho')">
+          <span class="storm-icon">🌪️</span>
+          Derecho
+        </button>
+
+        <button class="storm-button"
+                onclick="spawnStorm('mega-cell')">
+          <span class="storm-icon">🌀</span>
+          Mega Cell
+        </button>
+
+        <button class="storm-button"
+                onclick="spawnStorm('super-cell')">
+          <span class="storm-icon">⛈️</span>
+          Super Cell
+        </button>
+
+        <button class="storm-button"
+                onclick="spawnStorm('cell')">
+          <span class="storm-icon">🌩️</span>
+          Cell
+        </button>
+
+        <button class="storm-button"
+                onclick="spawnStorm('thunderstorm')">
+          <span class="storm-icon">⚡</span>
+          Thunderstorm
+        </button>
+
+      </div>
+
+      <div class="status">
+        Status:
+        <span id="status">Ready</span>
+      </div>
+
+      <button class="danger-button"
+              onclick="clearStorms()">
+        ✕ Clear All Storms
+      </button>
+
+    </div>
+  </div>
+
+
+  <script>
+
+    function spawnStorm(type) {
+
+      console.log("Spawn:", type);
+
+      document.getElementById("status").textContent =
+        "Spawning " + type;
+
+      /*
+        C'EST ICI QU'ON VA BRANCHER
+        TON VRAI MOTEUR DE SIMULATION.
+
+        Exemple :
+
+        simulation.spawnStorm(type);
+
+        ou :
+
+        createStorm(type);
+      */
+
+      // TEST POUR LE MOMENT
+      setTimeout(() => {
+        document.getElementById("status").textContent =
+          type + " spawned";
+      }, 500);
+    }
+
+
+    function clearStorms() {
+
+      console.log("Clear all storms");
+
+      document.getElementById("status").textContent =
+        "Clearing storms...";
+
+      /*
+        Plus tard :
+
+        simulation.clearAllStorms();
+      */
+
+      setTimeout(() => {
+        document.getElementById("status").textContent =
+          "Ready";
+      }, 500);
+    }
+
+  </script>
+
+</body>
+</html>
