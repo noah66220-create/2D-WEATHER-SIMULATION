@@ -6820,3 +6820,58 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
     }
   }
 } // end of mainscript
+
+// --- Fonctions pour l'Admin Panel ---
+
+// 1. Pour la chaleur et le vent
+function applyPhysicsEffect(value) {
+    if (typeof guiControls !== 'undefined') {
+        guiControls.globalHeating = value;
+    }
+}
+
+function applyWind(value) {
+    if (typeof guiControls !== 'undefined') {
+        guiControls.wind = value;
+    }
+}
+
+// 2. Pour le spawn instantané au centre avec tes noms exacts
+function instantSpawn(toolName, forceVorticity = null) {
+    if (typeof guiControls !== 'undefined' && typeof canvas !== 'undefined') {
+        let oldVorticity = guiControls.vorticity;
+        if (forceVorticity !== null) {
+            guiControls.vorticity = forceVorticity; // Force la tornade pour la supercellule
+        }
+
+        guiControls.tool = toolName;
+
+        let rect = canvas.getBoundingClientRect();
+        let centerX = rect.left + rect.width / 2;
+        let centerY = rect.top + rect.height / 2;
+
+        let mousedown = new MouseEvent('mousedown', {
+            clientX: centerX,
+            clientY: centerY,
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        let mouseup = new MouseEvent('mouseup', {
+            clientX: centerX,
+            clientY: centerY,
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+
+        canvas.dispatchEvent(mousedown);
+        canvas.dispatchEvent(mouseup);
+
+        if (forceVorticity !== null) {
+            setTimeout(() => {
+                guiControls.vorticity = oldVorticity;
+            }, 100);
+        }
+    }
+}
