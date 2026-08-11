@@ -3776,16 +3776,64 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
   }
 } // end of mainscript
 
-// Fonction pour appliquer la chaleur via l'Admin Panel
+// ==========================================
+// CODE DE L'ADMIN PANEL
+// ==========================================
+
 function applyPhysicsEffect(value) {
-    if (typeof guiControls !== 'undefined') {
-        guiControls.globalHeating = value;
-    }
+    if (typeof guiControls !== 'undefined') { guiControls.globalHeating = value; }
 }
 
-// Fonction pour appliquer le vent via l'Admin Panel
 function applyWind(value) {
-    if (typeof guiControls !== 'undefined') {
-        guiControls.wind = value;
+    if (typeof guiControls !== 'undefined') { guiControls.wind = value; }
+}
+
+function instantSpawn(toolName, forceVorticity = null) {
+    if (typeof guiControls === 'undefined') {
+        console.log("Erreur : guiControls introuvable.");
+        return;
     }
+    
+    let targetCanvas = typeof canvas !== 'undefined' ? canvas : document.querySelector('canvas');
+    if (!targetCanvas) return;
+
+    // 1. Mémoriser les anciens paramètres
+    let oldVorticity = guiControls.vorticity;
+    let oldTool = guiControls.tool;
+    
+    // 2. Activer l'outil et forcer la tornade si besoin
+    guiControls.tool = toolName;
+    if (forceVorticity !== null) { 
+        guiControls.vorticity = forceVorticity; 
+    }
+
+    // 3. Calculer le centre de l'écran
+    let rect = targetCanvas.getBoundingClientRect();
+    let centerX = rect.width / 2;
+    let centerY = rect.height / 2;
+    
+    // ⚠️ TRÈS IMPORTANT : Forcer la position de la souris dans le moteur du jeu
+    if (typeof mouseX !== 'undefined') mouseX = centerX;
+    if (typeof mouseY !== 'undefined') mouseY = centerY;
+
+    let eventOpts = {
+        clientX: rect.left + centerX,
+        clientY: rect.top + centerY,
+        offsetX: centerX,
+        offsetY: centerY,
+        bubbles: true,
+        cancelable: true,
+        view: window
+    };
+
+    // 4. Simuler un mouvement de souris AU MILIEU, puis un clic complet
+    targetCanvas.dispatchEvent(new MouseEvent('mousemove', eventOpts));
+    targetCanvas.dispatchEvent(new MouseEvent('mousedown', eventOpts));
+    targetCanvas.dispatchEvent(new MouseEvent('mouseup', eventOpts));
+
+    // 5. Remettre la vorticité normale après 0.1 seconde pour ne pas casser le jeu
+    setTimeout(() => { 
+        if (forceVorticity !== null) guiControls.vorticity = oldVorticity; 
+        guiControls.tool = oldTool; // Remet l'ancien outil que tu avais en main
+    }, 100);
 }
