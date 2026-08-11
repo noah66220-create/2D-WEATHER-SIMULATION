@@ -32,7 +32,6 @@
             overflow-x: hidden;
         }
 
-
         .main-nav {
             position: fixed;
             top: 0;
@@ -81,7 +80,6 @@
             padding: 1rem 2rem;
             background: rgba(255, 255, 255, 0.1);
             border-radius: var(--border-radius);
-
         }
 
         .resolution-warning p {
@@ -562,14 +560,127 @@
         </div>
     </div>
 
-    </div>
-
     <canvas id="graphCanvas"></canvas>
     <canvas id="dropletInfoCanvas" width="90" height="50"
         style="z-index: 1; position: absolute; left: 50%; top: 50%;"></canvas>
     <canvas id="mainCanvas">
         Your browser does not support HTML5, you must be using a really old browser!
     </canvas>
+
+    <!-- ========================================== -->
+    <!-- 🌪️ ADMIN PANEL - 2D WEATHER SANDBOX 🌪️  -->
+    <!-- ========================================== -->
+    <div id="admin-panel">
+        <h3>Météo Admin</h3>
+        <button onclick="spawnEvent('cell')">🌩️ Cellule Classique</button>
+        <button onclick="spawnEvent('supercell')">🌪️ Supercellule</button>
+        <button onclick="spawnEvent('megacell')">⚠️ Mega Cell</button>
+        <button onclick="spawnEvent('tornado')">🌪️ Tornade</button>
+        <button onclick="spawnEvent('derecho')">💨 Derecho</button>
+    </div>
+
+    <style>
+        #admin-panel {
+            position: absolute;
+            top: 80px; /* Un peu plus bas pour ne pas cacher la barre de navigation */
+            left: 20px;
+            background-color: rgba(20, 20, 25, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+        }
+        
+        #admin-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4CAF50;
+        }
+        
+        #admin-panel button {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+
+        #admin-panel button:hover {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+            transform: scale(1.02);
+        }
+    </style>
+
+    <script>
+        function spawnEvent(eventType) {
+            const centerX = window.innerWidth / 2;
+            const surfaceY = window.innerHeight * 0.85; 
+
+            switch(eventType) {
+                case 'cell':
+                    console.log("Exécution : Cellule Classique");
+                    applyPhysicsEffect(centerX, surfaceY, { heat: 50, moisture: 100, radius: 50 });
+                    break;
+                case 'supercell':
+                    console.log("Exécution : Supercellule");
+                    applyPhysicsEffect(centerX, surfaceY, { heat: 120, moisture: 150, radius: 80 });
+                    applyWindShear(centerX, surfaceY, 200); 
+                    break;
+                case 'megacell':
+                    console.log("Exécution : Mega Cell");
+                    applyPhysicsEffect(centerX, surfaceY, { heat: 200, moisture: 250, radius: 150 });
+                    applyWindShear(centerX, surfaceY, 300);
+                    break;
+                case 'tornado':
+                    console.log("Exécution : Tornade");
+                    applyPhysicsEffect(centerX, surfaceY, { heat: 150, moisture: 100, radius: 30 });
+                    createVortex(centerX, surfaceY - 50, { force: 100, radius: 40 });
+                    break;
+                case 'derecho':
+                    console.log("Exécution : Derecho");
+                    for(let offset = -300; offset <= 300; offset += 80) {
+                        applyPhysicsEffect(centerX + offset, surfaceY, { heat: 80, moisture: 120, radius: 50 });
+                        applyWind(centerX + offset, surfaceY - 100, { vx: 80, vy: 0, radius: 60 });
+                    }
+                    break;
+            }
+        }
+
+        function applyWindShear(x, y, height) {
+            applyWind(x, y, { vx: -40, vy: 0, radius: 100 });
+            applyWind(x, y - height, { vx: 60, vy: 0, radius: 150 });
+        }
+
+        function createVortex(x, y, params) {
+            applyWind(x - params.radius, y, { vx: 0, vy: params.force, radius: params.radius }); 
+            applyWind(x + params.radius, y, { vx: 0, vy: -params.force, radius: params.radius }); 
+        }
+
+        // --- ADAPTATEURS POUR app.js ---
+        function applyPhysicsEffect(x, y, params) {
+            console.log(`-> Injection Physique (X:${x}, Y:${y}) | Chaleur: ${params.heat}`);
+            // TODO: Lier avec la fonction du brush dans app.js
+        }
+
+        function applyWind(x, y, params) {
+            console.log(`-> Injection Vent (X:${x}, Y:${y}) | Vecteur: (${params.vx}, ${params.vy})`);
+            // TODO: Lier avec la fonction du vent dans app.js
+        }
+    </script>
 </body>
 
 </html>
