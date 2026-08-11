@@ -3775,3 +3775,17 @@ async function mainScript(initialBaseTex, initialWaterTex, initialWallTex, initi
     }
   }
 } // end of mainscript
+
+// Fonction pour appliquer la chaleur via l'Admin Panel
+function applyPhysicsEffect(value) {
+    if (typeof guiControls !== 'undefined') {
+        guiControls.globalHeating = value;
+    }
+}
+
+// Fonction pour appliquer le vent via l'Admin Panel
+function applyWind(value) {
+    if (typeof guiControls !== 'undefined') {
+        guiControls.wind = value;
+    }
+}
