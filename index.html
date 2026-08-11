@@ -683,9 +683,27 @@
     </script>
 </body>
     
-<div id="admin-panel" style="position: absolute; top: 15px; left: 15px; z-index: 1000; background: rgba(20, 20, 20, 0.85); padding: 15px; border-radius: 10px; color: white;">
-    <h3>Admin Panel</h3>
-    <button onclick="instantSpawn('CELL')">Cellule</button>
-    <button onclick="instantSpawn('SupercellT', 0.05)">Supercell (Tornade)</button>
+<!-- ========================================== -->
+<!-- BOUTONS DE L'ADMIN PANEL                   -->
+<!-- ========================================== -->
+<div id="admin-panel" style="position: absolute; top: 10px; left: 10px; z-index: 9999; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; color: white;">
+    
+    <!-- Boutons de Spawn -->
+    <button onclick="instantSpawn('TOOL_CELL')" style="padding: 5px; margin: 2px;">Spawn Cellule</button>
+    <button onclick="instantSpawn('TOOL_SUPERCELL', 0.05)" style="padding: 5px; margin: 2px; color: red;">Spawn Tornade</button>
+    <button onclick="instantSpawn('TOOL_STORM')" style="padding: 5px; margin: 2px;">Spawn Tempête</button>
+    
+    <br><br>
+
+    <!-- Curseur pour Chaleur -->
+    <label>Chaleur :</label>
+    <input type="range" min="0" max="1" step="0.05" value="0" oninput="applyPhysicsEffect(parseFloat(this.value))">
+    
+    <br>
+
+    <!-- Curseur pour Vent -->
+    <label>Vent :</label>
+    <input type="range" min="-0.01" max="0.01" step="0.001" value="0" oninput="applyWind(parseFloat(this.value))">
+
 </div>
 </html>
